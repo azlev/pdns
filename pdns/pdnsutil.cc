@@ -393,13 +393,14 @@ int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vect
 {
   vector<pair<string,string>> czresult = CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
   int numerrors, numwarnings;
+  numerrors = numwarnings = 0;
   string numrecords = "0";
   for (auto i : czresult) {
-    if (i.first == "Warning") {
+    if (i.first.compare("Warning") == 0) {
       numwarnings++;
-    } else if (i.first == "Error") {
+    } else if (i.first.compare("Error") == 0) {
       numerrors++;
-    } else if (i.first == "numercords") {
+    } else if (i.first.compare("numrecords") == 0) {
       numrecords = i.second;
       continue;
     }
