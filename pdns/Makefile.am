@@ -281,6 +281,7 @@ pdnsutil_SOURCES = \
 	opensslsigners.cc opensslsigners.hh \
 	packetcache.cc \
 	pdnsutil.cc \
+	checkzone.cc checkzone.hh \
 	qtype.cc \
 	randomhelper.cc \
 	rcpgenerator.cc rcpgenerator.hh \
