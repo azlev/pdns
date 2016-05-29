@@ -391,7 +391,25 @@ void rectifyAllZones(DNSSECKeeper &dk)
 
 int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords=0)
 {
-  return CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+  vector<pair<string,string>> czresult = CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+  int numerrors, numwarnings;
+  string numrecords = "0";
+  for (auto i : czresult) {
+    if (i.first == "Warning") {
+      numwarnings++;
+    } else if (i.first == "Error") {
+      numerrors++;
+    } else if (i.first == "numercords") {
+      numrecords = i.second;
+      continue;
+    }
+    cout << "[" << i.first << "] " << i.second << endl;
+  }
+  cout << "Checked " << numrecords << " records of '" << zone.toString() << "', " << numerrors << " errors, " << numwarnings << " warnings." << endl;
+  if (!numerrors) {
+    return 0;
+  }
+  return 1;
 }
 
 int checkAllZones(DNSSECKeeper &dk, bool exitOnError)
