@@ -1,4 +1,5 @@
 #include <sstream>
+
 #include "checkzone.hh"
 
 vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey) 

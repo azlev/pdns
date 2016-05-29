@@ -1141,10 +1141,13 @@ testrunner_SOURCES = \
 	test-sha_hh.cc \
 	test-statbag_cc.cc \
 	test-zoneparser_tng_cc.cc \
+	test-checkzone_cc.cc \
 	testrunner.cc \
 	ueberbackend.cc \
 	unix_utility.cc \
-	zoneparser-tng.cc zoneparser-tng.hh
+	zoneparser-tng.cc zoneparser-tng.hh \
+	checkzone.cc checkzone.hh \
+	dbdnsseckeeper.cc dnsseckeeper.hh
 
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
