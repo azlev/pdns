@@ -6,8 +6,10 @@
 
 class CheckZone {
   public:
+    
+    enum Type {WARNING, ERROR, NUMRECORDS};
 
-    static vector<pair<string,string>> checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* records, bool directdnskey);
+    static vector<pair<Type,string>> checkDelegation(const DNSName& zone, UeberBackend &B);
 
-    static vector<pair<string,string>> checkDelegation(const DNSName& zone, UeberBackend &B);
+    static vector<pair<Type,string>> checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* records, bool directdnskey);
 };

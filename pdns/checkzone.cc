@@ -3,9 +3,9 @@
 #include "checkzone.hh"
 
 
-vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, UeberBackend &B)
+vector<pair<CheckZone::Type,string>> CheckZone::checkDelegation(const DNSName& zone, UeberBackend &B)
 {
-  vector<pair<string,string>> retval;
+  vector<pair<CheckZone::Type,string>> retval;
   // Check for delegation in parent zone
   DNSName parent(zone);
   while(parent.chopOff()) {
@@ -17,7 +17,7 @@ vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, Uebe
       while(B.get(rr))
         ns |= (rr.qtype == QType::NS);
       if (!ns) {
-        retval.push_back({"Error", "No delegation for zone '"+zone.toString()+"' in parent '"+parent.toString()+"'"});
+        retval.push_back({CheckZone::Type::ERROR, "No delegation for zone '"+zone.toString()+"' in parent '"+parent.toString()+"'"});
       }
       break;
     }
@@ -25,9 +25,9 @@ vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, Uebe
   return retval;
 }
 
-vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* records, bool directdnskey) 
+vector<pair<CheckZone::Type,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* records, bool directdnskey) 
 {
-  vector<pair<string,string>> retval;
+  vector<pair<CheckZone::Type,string>> retval;
 
   NSEC3PARAMRecordContent ns3pr;
   bool narrow = false;
@@ -42,11 +42,11 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
   uint64_t numrecords=0;
 
   if (haveNSEC3 && isSecure && zone.wirelength() > 222) {
-    retval.push_back({"Error", "zone '" + zone.toStringNoDot() + "' has NSEC3 semantics but is too long to have the hash prepended. Zone name is " + std::to_string(zone.wirelength()) + " bytes long, whereas the maximum is 222 bytes."});
+    retval.push_back({CheckZone::Type::ERROR, "zone '" + zone.toStringNoDot() + "' has NSEC3 semantics but is too long to have the hash prepended. Zone name is " + std::to_string(zone.wirelength()) + " bytes long, whereas the maximum is 222 bytes."});
   }
 
   if (!validKeys) {
-    retval.push_back({"Error", "zone '" + zone.toStringNoDot() + "' has at least one invalid DNS Private Key."});
+    retval.push_back({CheckZone::Type::ERROR, "zone '" + zone.toStringNoDot() + "' has at least one invalid DNS Private Key."});
   }
 
   bool hasNsAtApex = false;
@@ -90,31 +90,31 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
             tmp = drc->getZoneRepresentation(false);
           }
           if(!pdns_iequals(tmp, rr.content)) {
-            retval.push_back({"Warning", "Parsed and original record content are not equal: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " '" + rr.content+"' (Content parsed as '"+tmp+"')"});
+            retval.push_back({CheckZone::Type::WARNING, "Parsed and original record content are not equal: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " '" + rr.content+"' (Content parsed as '"+tmp+"')"});
           }
         }
       } else {
         struct in6_addr tmpbuf;
         if (inet_pton(AF_INET6, rr.content.c_str(), &tmpbuf) != 1 || rr.content.find('.') != string::npos) {
-          retval.push_back({"Warning", "Following record is not a valid IPv6 address: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " '" + rr.content+"'"});
+          retval.push_back({CheckZone::Type::WARNING, "Following record is not a valid IPv6 address: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " '" + rr.content+"'"});
         }
       }
     }
     catch(std::exception& e)
     {
-      retval.push_back({"Error", "Following record had a problem: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content + "\nError was: " + e.what()});
+      retval.push_back({CheckZone::Type::ERROR, "Following record had a problem: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content + "\nError was: " + e.what()});
       continue;
     }
 
     if(!rr.qname.isPartOf(zone)) {
-      retval.push_back({"Error", "Record '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"' is out-of-zone."});
+      retval.push_back({CheckZone::Type::ERROR, "Record '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"' is out-of-zone."});
       continue;
     }
 
     content.str("");
     content<<rr.qname.toString()<<" "<<rr.qtype.getName()<<" "<<rr.content;
     if (recordcontents.count(toLower(content.str()))) {
-      retval.push_back({"Error", "Duplicate record found in rrset: '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"'"});
+      retval.push_back({CheckZone::Type::ERROR, "Duplicate record found in rrset: '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"'"});
       continue;
     } else
       recordcontents.insert(toLower(content.str()));
@@ -127,26 +127,26 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
     }
     ret = ttl.insert(pair<string, unsigned int>(toLower(content.str()), rr.ttl));
     if (ret.second == false && ret.first->second != rr.ttl) {
-      retval.push_back({"Error", "TTL mismatch in rrset: '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' ("+std::to_string(ret.first->second)+" != "+std::to_string(rr.ttl)+")"});
+      retval.push_back({CheckZone::Type::ERROR, "TTL mismatch in rrset: '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' ("+std::to_string(ret.first->second)+" != "+std::to_string(rr.ttl)+")"});
       continue;
     }
 
     if (isSecure && isOptOut && (rr.qname.countLabels() && rr.qname.getRawLabels()[0] == "*")) {
-      retval.push_back({"Warning", "wildcard record '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' is insecure\n[Info] Wildcard records in opt-out zones are insecure. Disable the opt-out flag for this zone to avoid this warning. Command: pdnsutil set-nsec3 "+zone.toString()});
+      retval.push_back({CheckZone::Type::WARNING, "wildcard record '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' is insecure\n[Info] Wildcard records in opt-out zones are insecure. Disable the opt-out flag for this zone to avoid this warning. Command: pdnsutil set-nsec3 "+zone.toString()});
     }
 
     if(rr.qname==zone) {
       if (rr.qtype.getCode() == QType::NS) {
         hasNsAtApex=true;
       } else if (rr.qtype.getCode() == QType::DS) {
-        retval.push_back({"Warning", "DS at apex in zone '"+zone.toString()+"', should not be here."});
+        retval.push_back({CheckZone::Type::WARNING, "DS at apex in zone '"+zone.toString()+"', should not be here."});
       }
     } else {
       if (rr.qtype.getCode() == QType::SOA) {
-        retval.push_back({"Error", "SOA record not at apex '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"'"});
+        retval.push_back({CheckZone::Type::ERROR, "SOA record not at apex '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"'"});
         continue;
       } else if (rr.qtype.getCode() == QType::DNSKEY) {
-        retval.push_back({"Warning", "DNSKEY record not at apex '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"', should not be here."});
+        retval.push_back({CheckZone::Type::WARNING, "DNSKEY record not at apex '"+rr.qname.toString()+" IN "+rr.qtype.getName()+" "+rr.content+"' in zone '"+zone.toString()+"', should not be here."});
       } else if (rr.qtype.getCode() == QType::NS && DNSName(rr.content).isPartOf(rr.qname)) {
         checkglue.insert(DNSName(toLower(rr.content)));
       } else if (rr.qtype.getCode() == QType::A || rr.qtype.getCode() == QType::AAAA) {
@@ -158,13 +158,13 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
       if (!cnames.count(rr.qname))
         cnames.insert(rr.qname);
       else {
-        retval.push_back({"Error", "Duplicate CNAME found at '"+rr.qname.toString()+"'"});
+        retval.push_back({CheckZone::Type::ERROR, "Duplicate CNAME found at '"+rr.qname.toString()+"'"});
         continue;
       }
     } else {
       if (rr.qtype.getCode() == QType::RRSIG) {
         if(!presigned) {
-          retval.push_back({"Error", "RRSIG found at '"+rr.qname.toString()+"' in non-presigned zone. These do not belong in the database."});
+          retval.push_back({CheckZone::Type::ERROR, "RRSIG found at '"+rr.qname.toString()+"' in non-presigned zone. These do not belong in the database."});
           continue;
         }
       } else
@@ -173,7 +173,7 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
 
     if(rr.qtype.getCode() == QType::NSEC || rr.qtype.getCode() == QType::NSEC3)
     {
-      retval.push_back({"Error", "NSEC or NSEC3 found at '"+rr.qname.toString()+"'. These do not belong in the database."});
+      retval.push_back({CheckZone::Type::ERROR, "NSEC or NSEC3 found at '"+rr.qname.toString()+"'. These do not belong in the database."});
       continue;
     }
 
@@ -183,30 +183,30 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
       {
         if(rr.ttl != sd.default_ttl)
         {
-          retval.push_back({"Warning", "DNSKEY TTL of "+std::to_string(rr.ttl)+" at '"+rr.qname.toString()+"' differs from SOA minimum of "+std::to_string(sd.default_ttl)});
+          retval.push_back({CheckZone::Type::WARNING, "DNSKEY TTL of "+std::to_string(rr.ttl)+" at '"+rr.qname.toString()+"' differs from SOA minimum of "+std::to_string(sd.default_ttl)});
         }
       }
       else
       {
-        retval.push_back({"Warning", "DNSKEY at '"+rr.qname.toString()+"' in non-presigned zone will mostly be ignored and can cause problems."});
+        retval.push_back({CheckZone::Type::WARNING, "DNSKEY at '"+rr.qname.toString()+"' in non-presigned zone will mostly be ignored and can cause problems."});
       }
     }
 
     if ( (rr.qtype.getCode() == QType::NS || rr.qtype.getCode() == QType::SRV || rr.qtype.getCode() == QType::MX || rr.qtype.getCode() == QType::CNAME || rr.qtype.getCode() == QType::DNAME) &&
          rr.content[rr.content.size()-1] == '.') {
-      retval.push_back({"Warning", "The record "+rr.qname.toString()+" with type "+rr.qtype.getName()+" has a trailing dot in the content ("+rr.content+"). Your backend might not work well with this."});
+      retval.push_back({CheckZone::Type::WARNING, "The record "+rr.qname.toString()+" with type "+rr.qtype.getName()+" has a trailing dot in the content ("+rr.content+"). Your backend might not work well with this."});
     }
 
     if(rr.auth == 0 && rr.qtype.getCode()!=QType::NS && rr.qtype.getCode()!=QType::A && rr.qtype.getCode()!=QType::AAAA)
     {
-      retval.push_back({"Error", "Following record is auth=0, run pdnsutil rectify-zone?: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content});
+      retval.push_back({CheckZone::Type::ERROR, "Following record is auth=0, run pdnsutil rectify-zone?: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content});
     }
   }
-  retval.push_back({"numrecords", std::to_string(numrecords)});
+  retval.push_back({CheckZone::Type::NUMRECORDS, std::to_string(numrecords)});
 
   for(auto &i: cnames) {
     if (noncnames.find(i) != noncnames.end()) {
-      retval.push_back({"Error", "CNAME "+i.toString()+" found, but other records with same label exist."});
+      retval.push_back({CheckZone::Type::ERROR, "CNAME "+i.toString()+" found, but other records with same label exist."});
     }
   }
 
@@ -226,17 +226,17 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
         message = "No record for '"+name.toString()+"' exists, but a TLSA record for '"+i.toString()+"' does.";
       }
       message += " A query for '"+name.toString()+"' will yield an empty response. This is most likely a mistake, please create records for '"+name.toString()+"'.";
-      retval.push_back({"Warning", message});
+      retval.push_back({CheckZone::Type::WARNING, message});
     }
   }
 
   if(!hasNsAtApex) {
-    retval.push_back({"Error", "No NS record at zone apex in zone '"+zone.toString()+"'"});
+    retval.push_back({CheckZone::Type::ERROR, "No NS record at zone apex in zone '"+zone.toString()+"'"});
   }
 
   for(const auto &qname : checkglue) {
     if (!glue.count(qname)) {
-      retval.push_back({"Warning", "Missing glue for '"+qname.toString()+"' in zone '"+zone.toString()+"'"});
+      retval.push_back({CheckZone::Type::WARNING, "Missing glue for '"+qname.toString()+"' in zone '"+zone.toString()+"'"});
     }
   }
 

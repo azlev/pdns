@@ -391,10 +391,10 @@ void rectifyAllZones(DNSSECKeeper &dk)
 
 int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords=0)
 {
-  vector<pair<string,string>> retval;
+  vector<pair<CheckZone::Type,string>> retval;
   SOAData sd;
   if(!B.getSOAUncached(zone, sd)) {
-    retval.push_back({"Error", "No SOA record present, or active, in zone '"+zone.toString() +"'" });
+    retval.push_back({CheckZone::Type::ERROR, "No SOA record present, or active, in zone '"+zone.toString() +"'" });
   }
   if (retval.size() == 0) {
     auto checkdelegation = CheckZone::checkDelegation(zone, B);
@@ -420,13 +420,16 @@ int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vect
   numerrors = numwarnings = 0;
   string numrecords = "0";
   for (auto i : retval) {
-    if (i.first.compare("Warning") == 0) {
-      numwarnings++;
-    } else if (i.first.compare("Error") == 0) {
-      numerrors++;
-    } else if (i.first.compare("numrecords") == 0) {
-      numrecords = i.second;
-      continue;
+    switch (i.first) {
+      case CheckZone::Type::WARNING:
+        numwarnings++;
+        break;
+      case CheckZone::Type::ERROR:
+        numerrors++;
+        break;
+      case CheckZone::Type::NUMRECORDS:
+        numrecords = i.second;
+        continue;
     }
     cout << "[" << i.first << "] " << i.second << endl;
   }
