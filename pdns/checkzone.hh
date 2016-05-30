@@ -5,9 +5,8 @@
 
 
 class CheckZone {
-    public:
+  public:
 
-        static vector<pair<string,string>> checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey);
+    static vector<pair<string,string>> checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey);
 };
-
 
