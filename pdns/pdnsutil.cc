@@ -400,7 +400,18 @@ int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vect
     auto checkdelegation = CheckZone::checkDelegation(zone, B);
     retval.insert(retval.end(), checkdelegation.begin(), checkdelegation.end());
 
-    auto czresult = CheckZone::checkZone(dk, sd, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+    DNSResourceRecord rr;
+    vector<DNSResourceRecord> records;
+    if(!suppliedrecords) {
+      sd.db->list(zone, sd.domain_id, g_verbose);
+      while(sd.db->get(rr)) {
+        records.push_back(rr);
+      }
+    }
+    else 
+      records=*suppliedrecords;
+
+    auto czresult = CheckZone::checkZone(dk, sd, zone, &records, ::arg().mustDo("direct-dnskey"));
 
     retval.insert(retval.end(), czresult.begin(), czresult.end());
   }

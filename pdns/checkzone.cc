@@ -25,7 +25,7 @@ vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, Uebe
   return retval;
 }
 
-vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey) 
+vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* records, bool directdnskey) 
 {
   vector<pair<string,string>> retval;
 
@@ -57,17 +57,7 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
   ostringstream content;
   pair<map<string, unsigned int>::iterator,bool> ret;
 
-  vector<DNSResourceRecord> records;
-  if(!suppliedrecords) {
-    sd.db->list(zone, sd.domain_id, g_verbose);
-    while(sd.db->get(rr)) {
-      records.push_back(rr);
-    }
-  }
-  else 
-    records=*suppliedrecords;
-
-  for(auto rr : records) { // we modify this
+  for(auto rr : *records) { // we modify this
     if(!rr.qtype.getCode())
       continue;
 
