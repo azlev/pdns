@@ -2,6 +2,29 @@
 
 #include "checkzone.hh"
 
+
+vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, UeberBackend &B)
+{
+  vector<pair<string,string>> retval;
+  // Check for delegation in parent zone
+  DNSName parent(zone);
+  while(parent.chopOff()) {
+    SOAData sd_p;
+    if(B.getSOAUncached(parent, sd_p)) {
+      bool ns=false;
+      DNSResourceRecord rr;
+      B.lookup(QType(QType::ANY), zone, NULL, sd_p.domain_id);
+      while(B.get(rr))
+        ns |= (rr.qtype == QType::NS);
+      if (!ns) {
+        retval.push_back({"Error", "No delegation for zone '"+zone.toString()+"' in parent '"+parent.toString()+"'"});
+      }
+      break;
+    }
+  }
+  return retval;
+}
+
 vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey) 
 {
   vector<pair<string,string>> retval;
@@ -30,24 +53,6 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, UeberBackend 
   if (!validKeys) {
     retval.push_back({"Error", "zone '" + zone.toStringNoDot() + "' has at least one invalid DNS Private Key."});
   }
-
-  // Check for delegation in parent zone
-  DNSName parent(zone);
-  while(parent.chopOff()) {
-    SOAData sd_p;
-    if(B.getSOAUncached(parent, sd_p)) {
-      bool ns=false;
-      DNSResourceRecord rr;
-      B.lookup(QType(QType::ANY), zone, NULL, sd_p.domain_id);
-      while(B.get(rr))
-        ns |= (rr.qtype == QType::NS);
-      if (!ns) {
-        retval.push_back({"Error", "No delegation for zone '"+zone.toString()+"' in parent '"+parent.toString()+"'"});
-      }
-      break;
-    }
-  }
-
 
   bool hasNsAtApex = false;
   set<DNSName> tlsas, cnames, noncnames, glue, checkglue;
@@ -252,3 +257,4 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, UeberBackend 
 
   return retval;
 }
+

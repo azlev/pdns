@@ -391,11 +391,16 @@ void rectifyAllZones(DNSSECKeeper &dk)
 
 int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords=0)
 {
-  vector<pair<string,string>> czresult = CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+  auto retval = CheckZone::checkDelegation(zone, B);
+
+  auto czresult = CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+
+  retval.insert(retval.end(), czresult.begin(), czresult.end());
+
   int numerrors, numwarnings;
   numerrors = numwarnings = 0;
   string numrecords = "0";
-  for (auto i : czresult) {
+  for (auto i : retval) {
     if (i.first.compare("Warning") == 0) {
       numwarnings++;
     } else if (i.first.compare("Error") == 0) {
