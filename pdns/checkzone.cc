@@ -102,7 +102,7 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
     }
     catch(std::exception& e)
     {
-      retval.push_back({"Error", "Following record had a problem: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content + /* endl + */ "Error was: " + e.what()});
+      retval.push_back({"Error", "Following record had a problem: "+rr.qname.toString()+" IN " +rr.qtype.getName()+ " " + rr.content + "\nError was: " + e.what()});
       continue;
     }
 
@@ -132,7 +132,7 @@ vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, c
     }
 
     if (isSecure && isOptOut && (rr.qname.countLabels() && rr.qname.getRawLabels()[0] == "*")) {
-      retval.push_back({"Warning", "wildcard record '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' is insecure"+ /* endl + */ "[Info] Wildcard records in opt-out zones are insecure. Disable the opt-out flag for this zone to avoid this warning. Command: pdnsutil set-nsec3 "+zone.toString()});
+      retval.push_back({"Warning", "wildcard record '"+rr.qname.toString()+" IN " +rr.qtype.getName()+" "+rr.content+"' is insecure\n[Info] Wildcard records in opt-out zones are insecure. Disable the opt-out flag for this zone to avoid this warning. Command: pdnsutil set-nsec3 "+zone.toString()});
     }
 
     if(rr.qname==zone) {
