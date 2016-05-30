@@ -25,14 +25,9 @@ vector<pair<string,string>> CheckZone::checkDelegation(const DNSName& zone, Uebe
   return retval;
 }
 
-vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey) 
+vector<pair<string,string>> CheckZone::checkZone(DNSSECKeeper &dk, SOAData sd, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords, bool g_verbose, bool directdnskey) 
 {
   vector<pair<string,string>> retval;
-  SOAData sd;
-  if(!B.getSOAUncached(zone, sd)) {
-    retval.push_back({"Error", "No SOA record present, or active, in zone '"+zone.toString() +"'" });
-    return retval;
-  }
 
   NSEC3PARAMRecordContent ns3pr;
   bool narrow = false;

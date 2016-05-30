@@ -391,11 +391,19 @@ void rectifyAllZones(DNSSECKeeper &dk)
 
 int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords=0)
 {
-  auto retval = CheckZone::checkDelegation(zone, B);
+  vector<pair<string,string>> retval;
+  SOAData sd;
+  if(!B.getSOAUncached(zone, sd)) {
+    retval.push_back({"Error", "No SOA record present, or active, in zone '"+zone.toString() +"'" });
+  }
+  if (retval.size() == 0) {
+    auto checkdelegation = CheckZone::checkDelegation(zone, B);
+    retval.insert(retval.end(), checkdelegation.begin(), checkdelegation.end());
 
-  auto czresult = CheckZone::checkZone(dk, B, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
+    auto czresult = CheckZone::checkZone(dk, sd, zone, suppliedrecords, g_verbose, ::arg().mustDo("direct-dnskey"));
 
-  retval.insert(retval.end(), czresult.begin(), czresult.end());
+    retval.insert(retval.end(), czresult.begin(), czresult.end());
+  }
 
   int numerrors, numwarnings;
   numerrors = numwarnings = 0;
