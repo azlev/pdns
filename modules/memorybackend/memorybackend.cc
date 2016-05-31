@@ -31,7 +31,7 @@
 #include "pdns/version.hh"
 #include <boost/algorithm/string.hpp>
 
-/* FIRST PART */
+
 class MemoryBackend : public DNSBackend
 {
 public:
@@ -40,7 +40,8 @@ public:
     setArgPrefix("memory"+suffix);
   }
 
-  bool list(const DNSName &target, int id, bool include_disabled) {
+  bool list(const DNSName &target, int id, bool include_disabled)
+  {
     return false; // we don't support AXFR
   }
 
@@ -54,12 +55,27 @@ public:
     return false;
   }
 
+  bool createDomain(const DNSName &domain)
+  {
+    DNSName name(domain);
+    if (d_db.find(name) == d_db.end()) {
+      d_db.insert({name, vector<DNSResourceRecord>()});
+      return true;
+    } else {
+      return false;
+    }
+  }
+  bool feedRecord(const DNSResourceRecord &rr, string *ordername=0)
+  {
+    return false; 
+  }
+
 private:
   string d_answer;
   DNSName d_domain;
+  map<DNSName,vector<DNSResourceRecord>> d_db;
 };
 
-/* SECOND PART */
 
 class MemoryFactory : public BackendFactory
 {
@@ -72,7 +88,6 @@ public:
   }
 };
 
-/* THIRD PART */
 
 class MemoryLoader
 {
