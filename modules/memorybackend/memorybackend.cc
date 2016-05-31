@@ -22,7 +22,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "pdns/utility.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
@@ -39,9 +38,6 @@ public:
   MemoryBackend(const string &suffix="")
   {
     setArgPrefix("memory"+suffix);
-    d_ourname=DNSName(getArg("hostname"));
-    d_ourdomain = d_ourname;
-    d_ourdomain.chopOff();
   }
 
   bool list(const DNSName &target, int id, bool include_disabled) {
@@ -50,49 +46,17 @@ public:
 
   void lookup(const QType &type, const DNSName &qdomain, DNSPacket *p, int zoneId)
   {
-    if(qdomain == d_ourdomain){
-      if(type.getCode() == QType::SOA || type.getCode() == QType::ANY) {
-        d_answer="ns1." + d_ourdomain.toString() + " hostmaster." + d_ourdomain.toString() + " 1234567890 86400 7200 604800 300";
-      } else {
-        d_answer="";
-      }
-    } else if (qdomain == d_ourname) {
-      if(type.getCode() == QType::A || type.getCode() == QType::ANY) {
-        ostringstream os;
-        os<<Utility::random()%256<<"."<<Utility::random()%256<<"."<<Utility::random()%256<<"."<<Utility::random()%256;
-        d_answer=os.str(); // our random ip address
-      } else {
-        d_answer="";
-      }
-    } else {
-      d_answer="";
-    }
+    d_answer="";
   }
 
   bool get(DNSResourceRecord &rr)
   {
-    if(!d_answer.empty()) {
-      if(d_answer.find("ns1.") == 0){
-        rr.qname=d_ourdomain;
-        rr.qtype=QType::SOA;
-      } else {
-        rr.qname=d_ourname;
-        rr.qtype=QType::A;
-      }
-      rr.ttl=5;             // 5 seconds
-      rr.auth = 1;          // it may be random.. but it is auth!
-      rr.content=d_answer;
-
-      d_answer="";          // this was the last answer
-      return true;
-    }
     return false;
   }
 
 private:
   string d_answer;
-  DNSName d_ourname;
-  DNSName d_ourdomain;
+  DNSName d_domain;
 };
 
 /* SECOND PART */
@@ -101,10 +65,7 @@ class MemoryFactory : public BackendFactory
 {
 public:
   MemoryFactory() : BackendFactory("memory") {}
-  void declareArguments(const string &suffix="")
-  {
-    declare(suffix,"hostname","Hostname which is to be memory","memory.example.com");
-  }
+  void declareArguments(const string &suffix="") {}
   DNSBackend *make(const string &suffix="")
   {
     return new MemoryBackend(suffix);
